@@ -10,29 +10,23 @@ class MoviesController < ApplicationController
     # will render app/views/movies/show.<extension> by default
   end
 
-
-  def index
-
-    query_parameters = {}
-    redirect_flag = false
-    @all_ratings = Movie.all_ratings
-
+  def process_ratings_parameters
     if params[:ratings].nil?
       if session[:selected_ratings].nil?
         session[:selected_ratings] = @all_ratings.map { |r| [r, '1'] }.to_h
       else
         @selected_ratings = session[:selected_ratings].keys
       end
-      query_parameters[:ratings] = session[:selected_ratings]
-      redirect_flag = true
+      @query_parameters[:ratings] = session[:selected_ratings]
+      @redirect = true
     else
       @selected_ratings = params[:ratings].keys
       session[:selected_ratings] = params[:ratings]
-      query_parameters[:ratings] = session[:selected_ratings]
+      @query_parameters[:ratings] = session[:selected_ratings]
     end
+  end
 
-    @movies = Movie.where(rating: @selected_ratings)
-
+  def process_sort_paremeter
     if params[:sort_by] == 'title'
       @sort_by = :title
       session[:sort_by] = @sort_by
@@ -40,13 +34,25 @@ class MoviesController < ApplicationController
       @sort_by = :release_date     
       session[:sort_by] = @sort_by
     elsif not session[:sort_by].nil?
-      redirect_flag = true
-      query_parameters[:sort_by] = session[:sort_by]
+      @query_parameters[:sort_by] = session[:sort_by]
+      @redirect = true
     end
+  end
 
-    if redirect_flag == true
+
+  def index
+
+    @query_parameters = {}
+    @all_ratings = Movie.all_ratings
+
+    process_ratings_parameters
+    process_sort_paremeter
+
+    @movies = Movie.where(rating: @selected_ratings)
+    
+    if not @redirect.nil?
       flash.keep
-      redirect_to movies_path(query_parameters)
+      redirect_to movies_path(@query_parameters)
     end
 
     if not @sort_by.nil?
